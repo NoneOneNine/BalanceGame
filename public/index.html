@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Would You Rather Game</title>
+</head>
+<body>
+<h1>Would You Rather Game</h1>
+
+<div id="host">
+    <button id="createRoom">Create Room</button>
+    <p id="hostCode"></p>
+    <div id="hostControls" style="display:none;">
+        <button id="startGame">Start Game</button>
+        <button id="nextTurn" style="display:none;">Next Turn</button>
+    </div>
+</div>
+
+<div id="join">
+    <input id="roomCode" placeholder="Enter Room Code" maxlength="4" />
+    <input id="playerName" placeholder="Enter Name" />
+    <button id="joinRoom">Join Room</button>
+</div>
+
+<h3>Room Info</h3>
+<div id="roomInfo"></div>
+
+<div id="gameArea" style="margin-top:20px;"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</body>
+</html>
