@@ -1,7 +1,6 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const { randomUUID } = require("crypto");
 
 const app = express();
 const server = http.createServer(app);
@@ -9,20 +8,34 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT} http://localhost:${PORT}`));
+const PORT =  3000;
 
-const rooms = {};
-const TOTAL_ROUNDS = 2;
+// Start server
+server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+});
 
 const questions = [
-    { a: "be able to fly", b: "be invisible" },
-    { a: "have no internet", b: "have no AC/heating" },
-    { a: "live in space", b: "live under the sea" },
-    { a: "have super strength", b: "have super speed" },
-    { a: "eat only pizza", b: "eat only ice cream" },
+    { question: "Would you rather live without music or without movies?", optionA: "Without music", optionB: "Without movies" },
+    { question: "Would you rather be invisible or be able to fly?", optionA: "Be invisible", optionB: "Be able to fly" },
+    { question: "Would you rather be perfectly fine without eating or perfectly fine without sleeping?", optionA: "No need for food", optionB: "No need for sleep" },
+    { question: "Would you rather lose the ability to speak or lose the ability to hear?", optionA: "No speaking", optionB: "No hearing" },
+    { question: "Would you rather be the best singer in the world or the best dancer in the world?", optionA: "Best singer", optionB: "Best dancer" },
+    { question: "Would you rather take amazing selfies but look terrible in all other photos or be photogenic everywhere except your selfies?", optionA: "Amazing selfies", optionB: "Photogenic everywhere else" },
+    { question: "Would you rather win $10,000 or your friend wins $100,000?", optionA: "Win 10K", optionB: "Friend wins 100K" },
+    { question: "Would you rather be the funniest person in the room or the smartest person in the room?", optionA: "Funniest", optionB: "Smartest" },
+    { question: "Would you rather your church know all your text messages or see your entire photo gallery?", optionA: "Messages", optionB: "Photos" },
+    { question: "Would you rather never lose the ability to interact with people in-person or electronically/online?", optionA: "In-person", optionB: "Electronically/online" },
+    { question: "Would you rather have more money or have more time?", optionA: "Money", optionB: "Time" },
+    { question: "Would you rather be a master of all instruments or be a master of all sports?", optionA: "All instruments", optionB: "All sports" },
+    { question: "Would you rather have a personal maid or a personal chef?", optionA: "Personal maid", optionB: "Personal chef" },
+    { question: "Would you rather get punished for a crime you did not commit or have someone else get credit for one of your major accomplishments?", optionA: "Punishment", optionB: "No credit" },
+    { question: "Would you rather see a year into the future or change a past life event? (both only once)", optionA: "See the future", optionB: "Change the past" },
+    { question: "Would you rather spend the next 6 months meeting people non-stop or meet nobody?", optionA: "Meet people non-stop", optionB: "Meet nobody" },
+    { question: "Would you rather never eat chocolate again or never eat pizza again?", optionA: "No chocolate", optionB: "No pizza" },
 ];
 
+// Generate a random 4-letter room code
 function generateRoomCode() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let code = "";
@@ -32,123 +45,153 @@ function generateRoomCode() {
     return code;
 }
 
+// Room generation
+const roomCode = generateRoomCode();
+console.log(`Room created: ${roomCode}`);
+room = {
+    code: roomCode,
+    players: [],
+    hostId: null,
+    started: false,
+    currentPlayerId: null,
+    currentQuestion: null,
+    currentAnswer: null,
+    points: {},
+    guesses: {}
+};
+
+// Socket.io event handling
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    socket.on("createRoom", () => {
-        let code;
-        do {
-            code = generateRoomCode();
-        } while (rooms[code]);
+    // Joining a room
+    socket.on("joinRoom", ({ roomCode, playerName }) => {
+        if (room.code === roomCode) {
+            room.players.push({ id: socket.id, name: playerName });
+            room.points[socket.id] = 0;
 
-        rooms[code] = {
-            players: [],
-            host: socket.id,
-            turnIndex: 0,
-            currentRound: 1,
-            currentQuestion: null,
-            currentAnswer: null,
-            guesses: {},
-        };
+            socket.join(roomCode);
+            console.log(`${playerName} joined room ${roomCode}`);
 
-        socket.join(code);
-        socket.emit("roomCreated", { code });
-    });
+            // If this is the first player, assign them as host
+            if (room.players.length === 1) {
+                room.hostId = socket.id;
+            }
 
-    socket.on("joinRoom", ({ code, name }) => {
-        const room = rooms[code];
-        if (!room) {
-            socket.emit("errorMessage", "Room does not exist.");
-            return;
-        }
+            // Update the list of players in the room
+            const players = room.players.map(p => p.name);
+            io.to(roomCode).emit("roomUpdate", players);
 
-        room.players.push(name);
-        socket.join(code);
-        socket.emit("roomJoined", { code, players: room.players });
-        io.to(code).emit("roomJoined", { code, players: room.players });
-    });
-
-    socket.on("startGame", () => {
-        const roomCode = Array.from(socket.rooms).find((r) => r !== socket.id);
-        const room = rooms[roomCode];
-        if (!room) {
-            socket.emit("errorMessage", "You're not hosting a room.");
-            return;
-        }
-
-        room.turnIndex = 0;
-        room.currentRound = 1;
-        room.guesses = {};
-        room.currentAnswer = null;
-
-        const currentPlayer = room.players[room.turnIndex];
-        const question = questions[Math.floor(Math.random() * questions.length)];
-
-        room.currentQuestion = question;
-
-        io.to(roomCode).emit("gameStarted");
-        io.to(roomCode).emit("turnChanged", { currentPlayer });
-        io.to(socket.id).emit("yourTurn", { question });
-    });
-
-    socket.on("submitAnswer", ({ choice }) => {
-        const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
-        const room = rooms[roomCode];
-        if (!room) return;
-
-        room.currentAnswer = choice;
-        io.to(roomCode).emit("startGuessing", { question: room.currentQuestion });
-    });
-
-    socket.on("submitGuess", ({ guess, name }) => {
-        const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
-        const room = rooms[roomCode];
-        if (!room) return;
-
-        room.guesses[name] = guess;
-
-        if (Object.keys(room.guesses).length === room.players.length - 1) {
-            const correctPlayers = Object.entries(room.guesses)
-                .filter(([_, g]) => g === room.currentAnswer)
-                .map(([name]) => name);
-
-            io.to(roomCode).emit("revealAnswer", {
-                answer: room.currentAnswer,
-                correctPlayers,
+            // Tell this client whether they're the host
+            io.to(socket.id).emit("hostAssignment", {   // Hopefully this doesn't result to an error
+                isHost: socket.id === room.hostId
             });
-
-            setTimeout(() => {
-                advanceTurn(roomCode);
-            }, 5000);
+        } else {
+            socket.emit("errorMessage", "Invalid room code.");
         }
     });
 
-    function advanceTurn(roomCode) {
-        const room = rooms[roomCode];
-        if (!room) return;
+    // Host starting the game
+    socket.on("startGame", (roomCode) => {
+        if (room) {
+            if (socket.id === room.hostId) {
+                room.started = true;
+                io.to(roomCode).emit("gameStarted");
+                console.log(`Game in room ${roomCode} started.`);
 
-        room.turnIndex += 1;
-
-        if (room.turnIndex >= room.players.length) {
-            room.turnIndex = 0;
-            room.currentRound += 1;
+                startNewTurn(roomCode);
+            } else {
+                socket.emit("errorMessage", "Only the host can start the game.");
+            }
         }
+    });
 
-        if (room.currentRound > TOTAL_ROUNDS) {
-            io.to(roomCode).emit("gameEnded", {
-                totalRounds: TOTAL_ROUNDS,
+    // Player submitting their answer
+    socket.on("submitAnswer", ({ currentPlayerName, roomCode, answer }) => {
+        room.currentAnswer = answer;
+        room.guesses= {};
+        console.log(`${currentPlayerName} answered: ${answer}`);
+
+        // Notify other players it's time to guess
+        io.to(roomCode).emit("startGuessing", {
+            currentPlayerId: room.currentPlayerId,
+            question: room.currentQuestion,
+        });
+    });
+
+    socket.on("submitGuess", ({ guess }) => {
+        room.guesses[socket.id] = guess;
+        console.log(`Player ${socket.id} guessed: ${guess} in room ${room.code}`);
+
+        // Check if all non-current players have guessed
+        const numNonCurrentPlayers = room.players.length - 1;
+        if (Object.keys(room.guesses).length === numNonCurrentPlayers) {
+            io.to(room.code).emit("allGuessesSubmitted");
+        }
+    });
+
+    socket.on("revealResults", () => {
+        const correctAnswer = room.currentAnswer;
+        const results = [];
+
+        for (const [playerId, guess] of Object.entries(room.guesses)) {
+            const isCorrect = guess === correctAnswer;
+            if (isCorrect) {
+                room.points[playerId] = (room.points[playerId] || 0) + 1;
+            }
+
+            const playerObj = room.players.find(p => p.id === playerId);
+            const playerName = playerObj ? playerObj.name : "Unknown";
+
+            results.push({
+                playerId,
+                playerName,
+                guess,
+                isCorrect
             });
-            return;
         }
 
+        io.to(room.code).emit("roundResults", { correctAnswer, results });
+
+        // Clear for the next round
         room.guesses = {};
-        room.currentAnswer = null;
+    });
 
-        const currentPlayer = room.players[room.turnIndex];
-        const question = questions[Math.floor(Math.random() * questions.length)];
-        room.currentQuestion = question;
+    socket.on("startNextRound", () => {
+        // Call your function to select the next player and send the new turn
+        startNewTurn(room.code);
+    });
 
-        io.to(roomCode).emit("turnChanged", { currentPlayer });
-        io.to(roomCode).emit("yourTurn", { question });
-    }
+    // Disconnection handler (optional for now)
+    socket.on("disconnect", () => {
+        console.log("A user disconnected:", socket.id);
+    });
 });
+
+// Function to start a new turn
+function startNewTurn(code) {
+    const players = room.players;
+
+    // Pick a random player for the turn
+    const randomIndex = Math.floor(Math.random() * players.length);
+    const currentPlayer = players[randomIndex];
+
+    // Pick a random question
+    const questionIndex = Math.floor(Math.random() * questions.length);
+    const question = questions[questionIndex];
+
+    // Store current turn state
+    room.currentPlayerId = currentPlayer.id;
+    room.currentQuestion = question;
+    room.currentAnswer = null;
+
+    console.log(`New turn for player ${currentPlayer.name} in room ${code}.`);
+
+    // Broadcast turn info and question
+    io.to(code).emit("newTurn", {
+        currentPlayerId: currentPlayer.id,
+        currentPlayerName: currentPlayer.name,
+        question: question,
+        codeFromServer: code
+    });
+}

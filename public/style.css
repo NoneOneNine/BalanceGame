@@ -1,0 +1,136 @@
+/* General Reset */
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background: #f4f4f9;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Screens Layout */
+#joinScreen, #lobbyScreen {
+    text-align: center;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 320px;
+}
+
+/* Form Styling */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+input {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+button {
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #45a049;
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Room Code Text */
+.room-code {
+    font-size: 18px;
+    margin: 20px 0 10px;
+    font-weight: bold;
+}
+
+/* Players List */
+#playersList {
+    margin: 20px 0;
+    text-align: left;
+}
+
+#playersList h3 {
+    margin-bottom: 10px;
+}
+
+#playersList p {
+    margin: 5px 0;
+    padding: 5px;
+    background: #eee;
+    border-radius: 4px;
+}
+
+/* Waiting Message */
+.waiting {
+    margin: 20px 0;
+    font-style: italic;
+    color: #555;
+}
+
+/* Game Screen */
+#gameScreen {
+    text-align: center;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 360px;
+}
+
+/* Game Content */
+#gameContent {
+    margin-top: 20px;
+}
+
+#gameContent h2 {
+    font-size: 22px;
+    margin-bottom: 15px;
+}
+
+#gameContent p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+/* Game Option Buttons */
+#gameContent button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#gameContent button:hover {
+    background: #45a049;
+}
+
+#gameContent button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}

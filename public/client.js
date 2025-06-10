@@ -1,103 +1,164 @@
 const socket = io();
 
-const createRoomBtn = document.getElementById("createRoom");
-const joinRoomBtn = document.getElementById("joinRoom");
-const startGameBtn = document.getElementById("startGame");
-const nextTurnBtn = document.getElementById("nextTurn");
+// UI Elements
+const joinScreen = document.getElementById("joinScreen");
+const lobbyScreen = document.getElementById("lobbyScreen");
+const lobbyRoomCode = document.getElementById("lobbyRoomCode");
+const gameScreen = document.getElementById("gameScreen");
+const gameRoomCode = document.getElementById("gameRoomCode");
+const gameContent = document.getElementById("gameContent");
+const playersList = document.getElementById("playersList");
+const joinButton = document.getElementById("joinButton");
+const startGameButton = document.getElementById("startGameButton");
 
-const hostCodeDisplay = document.getElementById("hostCode");
-const hostControls = document.getElementById("hostControls");
-const roomInfoDisplay = document.getElementById("roomInfo");
-const gameArea = document.getElementById("gameArea");
+let roomCode = "";
+let playerName = "";
+let isHost = false;
 
-createRoomBtn.onclick = () => {
-    socket.emit("createRoom");
+// Join button click handler
+joinButton.onclick = () => {
+    roomCode = document.getElementById("roomCodeInput").value.toUpperCase();
+    playerName = document.getElementById("playerNameInput").value;
+
+    if (roomCode && playerName) {
+        socket.emit("joinRoom", { roomCode, playerName });
+    } else {
+        alert("Please enter both a room code and your name.");
+    }
 };
 
-joinRoomBtn.onclick = () => {
-    const code = document.getElementById("roomCode").value.toUpperCase();
-    const name = document.getElementById("playerName").value;
-    socket.emit("joinRoom", { code, name });
-};
+// Update the lobby's list of players
+socket.on("roomUpdate", (players) => {
+    if (lobbyScreen.style.display === "none") {
+        joinScreen.style.display = "none";
+        lobbyScreen.style.display = "block";
+        lobbyRoomCode.textContent = roomCode;
+    }
 
-startGameBtn.onclick = () => {
-    socket.emit("startGame");
-};
-
-nextTurnBtn.onclick = () => {
-    gameArea.innerHTML = "";
-    socket.emit("nextTurn");
-};
-
-socket.on("roomCreated", ({ code }) => {
-    hostCodeDisplay.innerText = `Room Code: ${code}`;
-    hostControls.style.display = "block";
+    playersList.innerHTML = "<h3>Players:</h3>" +
+        players.map(p => `<p>${p}</p>`).join("");
 });
 
-socket.on("roomJoined", ({ code, players }) => {
-    roomInfoDisplay.innerHTML = `<strong>Room ${code}</strong><br>Players:<br>` +
-        players.map(p => `• ${p}`).join("<br>");
-});
+// Host assignment event
+socket.on("hostAssignment", (data) => {
+    isHost = data.isHost;
+    startGameButton.disabled = !isHost;
 
-socket.on("gameStarted", () => {
-    roomInfoDisplay.innerHTML += "<br><strong>The game has started!</strong>";
-    nextTurnBtn.style.display = "inline-block";
-});
-
-socket.on("turnChanged", ({ currentPlayer }) => {
-    const name = document.getElementById("playerName").value;
-    gameArea.innerHTML = `<p><em>${currentPlayer}'s turn</em></p>`;
-
-    if (name === currentPlayer) {
-        gameArea.innerHTML += `<p><strong>It's YOUR turn! Please wait for a question...</strong></p>`;
+    if (isHost) {
+        startGameButton.style.display = "inline-block";
+    } else {
+        startGameButton.style.display = "none";
     }
 });
 
-socket.on("yourTurn", ({ question }) => {
-    gameArea.innerHTML = `
-    <h3>Would You Rather...</h3>
-    <button onclick="submitAnswer('A')">A) ${question.a}</button><br><br>
-    <button onclick="submitAnswer('B')">B) ${question.b}</button>
-  `;
+// Start game button click (host only)
+startGameButton.onclick = () => {
+    if (isHost) {
+        socket.emit("startGame", roomCode);
+    }
+};
+
+// On game started
+socket.on("gameStarted", () => {
+    lobbyScreen.style.display = "none";
+    gameScreen.style.display = "block";
+    gameRoomCode.textContent = roomCode;
+    gameContent.innerHTML = `<p>Waiting for the first turn to start...</p>`;
 });
 
-function submitAnswer(choice) {
-    socket.emit("submitAnswer", { choice });
-    gameArea.innerHTML = `<p>Waiting for others to guess...</p>`;
-}
+socket.on("newTurn", ({currentPlayerId, currentPlayerName, question, codeFromServer}) => {
+    roomCode = codeFromServer;
 
-socket.on("startGuessing", ({ question }) => {
-    const name = document.getElementById("playerName").value;
-    gameArea.innerHTML = `
-    <h3>Guess the player's answer:</h3>
-    <button onclick="submitGuess('A')">A) ${question.a}</button><br><br>
-    <button onclick="submitGuess('B')">B) ${question.b}</button>
-  `;
+    gameContent.innerHTML = `
+        <h2>It's ${currentPlayerName}'s turn!</h2>
+        <p>${question.question}</p>
+        <button id="optionAButton">${question.optionA}</button>
+        <button id="optionBButton">${question.optionB}</button>
+    `;
+
+    // Disable buttons if it's not your turn
+    if (socket.id !== currentPlayerId) {
+        document.getElementById("optionAButton").disabled = true;
+        document.getElementById("optionBButton").disabled = true;
+    } else {
+        // If it's your turn, you can pick your answer
+        document.getElementById("optionAButton").onclick = () => {
+            socket.emit("submitAnswer", { currentPlayerName, roomCode, answer: "A" });
+        };
+        document.getElementById("optionBButton").onclick = () => {
+            socket.emit("submitAnswer", { currentPlayerName, roomCode, answer: "B" });
+        };
+    }
 });
 
-function submitGuess(guess) {
-    const name = document.getElementById("playerName").value;
-    socket.emit("submitGuess", { guess, name });
-    gameArea.innerHTML = `<p>Guess submitted. Waiting for others...</p>`;
-}
+// When it's time for everyone else to guess
+socket.on("startGuessing", ({ currentPlayerId, question }) => {
+    // Only show this for players who aren't the answering player
+    if (socket.id !== currentPlayerId) {
+        gameContent.innerHTML = `
+            <h2>Guess ${question.question}</h2>
+            <button id="guessAButton">Guess: ${question.optionA}</button>
+            <button id="guessBButton">Guess: ${question.optionB}</button>
+        `;
 
-socket.on("revealAnswer", ({ answer, correctPlayers }) => {
-    gameArea.innerHTML = `
-    <h3>Answer was: ${answer}</h3>
-    <p>Correct guesses:</p>
-    <ul>${correctPlayers.map(p => `<li>${p}</li>`).join("")}</ul>
-    <p><em>Next round will begin shortly...</em></p>
-  `;
+        // Implement guess button click handlers here later.
+        document.getElementById("guessAButton").onclick = () => {
+            socket.emit("submitGuess", { guess: 'A' });
+
+        };
+        document.getElementById("guessBButton").onclick = () => {
+            socket.emit("submitGuess", { guess: 'B' });
+        };
+    } else {
+        gameContent.innerHTML = `<p>Waiting for others to guess your answer...</p>`;
+    }
 });
 
-socket.on("gameEnded", ({ totalRounds }) => {
-    gameArea.innerHTML = `
-    <h2>🎉 Game Over!</h2>
-    <p>All ${totalRounds} rounds are complete.</p>
-    <p>Thanks for playing!</p>
-  `;
+socket.on("allGuessesSubmitted", () => {
+    if (isHost) {
+        gameContent.innerHTML = `
+            <h2>All players have made their guesses!</h2>
+            <button id="revealButton">Reveal Results</button>
+        `;
+
+        document.getElementById("revealButton").onclick = () => {
+            socket.emit("revealResults");
+        };
+    } else {
+        gameContent.innerHTML = `<h2>All guesses are in! Waiting for the host to reveal results...</h2>`;
+    }
 });
 
+socket.on("roundResults", ({ correctAnswer, results }) => {
+    let resultHtml = `<h2>Correct Answer: ${correctAnswer}</h2><h3>Results:</h3>`;
+
+    results.forEach(r => {
+        resultHtml += `<p>${r.playerName} guessed ${r.guess} — ${r.isCorrect ? '✅' : '❌'}</p>`;
+    });
+
+    if (isHost) {
+        resultHtml += `<button id="nextRoundButton">Next</button>`;
+        gameContent.innerHTML = resultHtml;
+
+        document.getElementById("nextRoundButton").onclick = () => {
+            socket.emit("startNextRound");
+        };
+    } else {
+        gameContent.innerHTML = resultHtml;
+    }
+});
+
+// Error messages
 socket.on("errorMessage", (msg) => {
     alert(msg);
 });
+
+// Animate the waiting dots
+let dotCount = 1;
+setInterval(() => {
+    const dots = document.getElementById("dots");
+    if (dots) {
+        dotCount = (dotCount % 3) + 1;
+        dots.textContent = ".".repeat(dotCount);
+    }
+}, 500);
