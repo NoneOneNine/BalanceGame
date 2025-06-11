@@ -52,6 +52,8 @@ room = {
     code: roomCode,
     players: [],
     hostId: null,
+    playersWhoAnswered: [],
+    usedQuestions: [],
     started: false,
     currentPlayerId: null,
     currentQuestion: null,
@@ -131,7 +133,9 @@ io.on("connection", (socket) => {
     });
 
     socket.on("revealResults", () => {
+        const currentPlayerName = room.players.find(player => player.id === room.currentPlayerId)?.name;
         const correctAnswer = room.currentAnswer;
+        const correctAnswerText = room.currentQuestion["option" + correctAnswer];
         const results = [];
 
         for (const [playerId, guess] of Object.entries(room.guesses)) {
@@ -151,7 +155,7 @@ io.on("connection", (socket) => {
             });
         }
 
-        io.to(room.code).emit("roundResults", { correctAnswer, results });
+        io.to(room.code).emit("roundResults", { currentPlayerName, correctAnswerText, results });
 
         // Clear for the next round
         room.guesses = {};
@@ -170,15 +174,11 @@ io.on("connection", (socket) => {
 
 // Function to start a new turn
 function startNewTurn(code) {
-    const players = room.players;
-
     // Pick a random player for the turn
-    const randomIndex = Math.floor(Math.random() * players.length);
-    const currentPlayer = players[randomIndex];
+    const currentPlayer = getNextAnsweringPlayer();
 
     // Pick a random question
-    const questionIndex = Math.floor(Math.random() * questions.length);
-    const question = questions[questionIndex];
+    const question = getRandomQuestion();
 
     // Store current turn state
     room.currentPlayerId = currentPlayer.id;
@@ -194,4 +194,44 @@ function startNewTurn(code) {
         question: question,
         codeFromServer: code
     });
+}
+
+function getNextAnsweringPlayer() {
+    const availablePlayers = room.players.filter(p =>
+        !room.playersWhoAnswered.includes(p.id)
+    );
+
+    // If everyone has answered, reset the list
+    if (availablePlayers.length === 0) {
+        room.playersWhoAnswered = [];
+        return getNextAnsweringPlayer();
+    }
+
+    // Pick a random player from those who haven't answered yet
+    const randomIndex = Math.floor(Math.random() * availablePlayers.length);
+    const selectedPlayer = availablePlayers[randomIndex];
+
+    room.playersWhoAnswered.push(selectedPlayer.id);
+    return selectedPlayer;
+}
+
+function getRandomQuestion() {
+    const availableQuestions = questions.filter((_, index) =>
+        !room.usedQuestions.includes(index)
+    );
+
+    // If no available questions, reset
+    if (availableQuestions.length === 0) {
+        room.usedQuestions = [];
+        return getRandomQuestion();
+    }
+
+    const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+    const selectedQuestion = availableQuestions[randomIndex];
+
+    // Track the index of the question relative to the primary questions array
+    const realIndex = questions.indexOf(selectedQuestion);
+    room.usedQuestions.push(realIndex);
+
+    return selectedQuestion;
 }

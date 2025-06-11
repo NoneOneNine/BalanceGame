@@ -14,6 +14,7 @@ const startGameButton = document.getElementById("startGameButton");
 let roomCode = "";
 let playerName = "";
 let isHost = false;
+let hasGuessed = false;
 
 // Join button click handler
 joinButton.onclick = () => {
@@ -93,6 +94,8 @@ socket.on("newTurn", ({currentPlayerId, currentPlayerName, question, codeFromSer
 
 // When it's time for everyone else to guess
 socket.on("startGuessing", ({ currentPlayerId, question }) => {
+    hasGuessed = false;  // Reset the flag for this new round
+
     // Only show this for players who aren't the answering player
     if (socket.id !== currentPlayerId) {
         gameContent.innerHTML = `
@@ -101,13 +104,25 @@ socket.on("startGuessing", ({ currentPlayerId, question }) => {
             <button id="guessBButton">Guess: ${question.optionB}</button>
         `;
 
+        const disableGuessButtons = () => {
+            document.getElementById("guessAButton").disabled = true;
+            document.getElementById("guessBButton").disabled = true;
+        };
+
         // Implement guess button click handlers here later.
         document.getElementById("guessAButton").onclick = () => {
-            socket.emit("submitGuess", { guess: 'A' });
-
+            if (!hasGuessed) {
+                hasGuessed = true;
+                socket.emit("submitGuess", { guess: 'A' });
+                disableGuessButtons();
+            }
         };
         document.getElementById("guessBButton").onclick = () => {
-            socket.emit("submitGuess", { guess: 'B' });
+            if (!hasGuessed) {
+                hasGuessed = true;
+                socket.emit("submitGuess", { guess: 'B' });
+                disableGuessButtons();
+            }
         };
     } else {
         gameContent.innerHTML = `<p>Waiting for others to guess your answer...</p>`;
@@ -129,11 +144,11 @@ socket.on("allGuessesSubmitted", () => {
     }
 });
 
-socket.on("roundResults", ({ correctAnswer, results }) => {
-    let resultHtml = `<h2>Correct Answer: ${correctAnswer}</h2><h3>Results:</h3>`;
+socket.on("roundResults", ({ currentPlayerName, correctAnswerText, results }) => {
+    let resultHtml = `<h2>${currentPlayerName} said: ${correctAnswerText}</h2><h3>Results:</h3>`;
 
     results.forEach(r => {
-        resultHtml += `<p>${r.playerName} guessed ${r.guess} — ${r.isCorrect ? '✅' : '❌'}</p>`;
+        resultHtml += `<p>${r.playerName} — ${r.isCorrect ? '✅' : '❌'}</p>`;
     });
 
     if (isHost) {
