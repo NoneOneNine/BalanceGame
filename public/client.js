@@ -7,6 +7,8 @@ const lobbyRoomCode = document.getElementById("lobbyRoomCode");
 const gameScreen = document.getElementById("gameScreen");
 const gameRoomCode = document.getElementById("gameRoomCode");
 const gameContent = document.getElementById("gameContent");
+const endScreen = document.getElementById("endScreen");
+const endContent = document.getElementById("endContent");
 const playersList = document.getElementById("playersList");
 const joinButton = document.getElementById("joinButton");
 const startGameButton = document.getElementById("startGameButton");
@@ -99,7 +101,8 @@ socket.on("startGuessing", ({ currentPlayerId, question }) => {
     // Only show this for players who aren't the answering player
     if (socket.id !== currentPlayerId) {
         gameContent.innerHTML = `
-            <h2>Guess ${question.question}</h2>
+            <h2>What was the correct answer?</h2>
+            <h2>${question.question}</h2>
             <button id="guessAButton">Guess: ${question.optionA}</button>
             <button id="guessBButton">Guess: ${question.optionB}</button>
         `;
@@ -163,6 +166,38 @@ socket.on("roundResults", ({ currentPlayerName, correctAnswerText, results }) =>
     }
 });
 
+// Announce game over once game is done
+socket.on("gameOver", ({}) => {
+    gameScreen.style.display = "none";
+    endScreen.style.display = "block";
+
+    if (isHost) {
+        endContent.innerHTML = `
+            <h2>Time to reveal the winner!</h2>
+            <button id="showFinalScore">Results</button>
+        `;
+    } else {
+        endContent.innerHTML = `
+            <h2>Time to reveal the winner!</h2>
+        `;
+    }
+
+    document.getElementById("showFinalScore").onclick = () => {
+        socket.emit("revealScoreboard", {});
+    };
+});
+
+// Display scoreboard
+socket.on("scoreBoard", ({ finalScores }) => {
+    endContent.innerHTML = `
+        <h2>🏆 Final Results 🏆</h2>
+        <ul>
+          ${finalScores}
+        </ul>
+        <button onclick="window.location.reload()">Play Again</button>
+    `;
+});
+
 // Error messages
 socket.on("errorMessage", (msg) => {
     alert(msg);
@@ -177,3 +212,20 @@ setInterval(() => {
         dots.textContent = ".".repeat(dotCount);
     }
 }, 500);
+
+// Prevents players from swipe refresh on mobile
+let touchStartY = 0;
+
+window.addEventListener("touchstart", function (e) {
+    if (e.touches.length !== 1) return;
+    touchStartY = e.touches[0].clientY;
+});
+
+window.addEventListener("touchmove", function (e) {
+    const touchY = e.touches[0].clientY;
+    const touchDeltaY = touchY - touchStartY;
+
+    if (window.scrollY === 0 && touchDeltaY > 0) {
+        e.preventDefault();  // Prevent swipe down refresh
+    }
+}, { passive: false });

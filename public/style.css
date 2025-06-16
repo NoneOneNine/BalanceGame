@@ -86,8 +86,8 @@ button:disabled {
     color: #555;
 }
 
-/* Game Screen */
-#gameScreen {
+/* Game Screen and End Screen */
+#gameScreen, #endScreen {
     text-align: center;
     background: #ffffff;
     padding: 30px;
@@ -96,8 +96,8 @@ button:disabled {
     width: 360px;
 }
 
-/* Game Content */
-#gameContent {
+/* Game Content and End Content */
+#gameContent, #endContent {
     margin-top: 20px;
 }
 
@@ -133,4 +133,8 @@ button:disabled {
 #gameContent button:disabled {
     background: #ccc;
     cursor: not-allowed;
+}
+
+#endContent li {
+    text-align: left;
 }
