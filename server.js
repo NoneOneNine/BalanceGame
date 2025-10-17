@@ -6,15 +6,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Skip middleware
-app.use((req, res, next) => {
-    res.setHeader("ngrok-skip-browser-warning", "true");
-    next();
-});
 
 app.use(express.static("public"));
 
-const PORT =  process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 // Start server
 server.listen(PORT, () => {
@@ -229,9 +224,6 @@ io.on("connection", (socket) => {
         room.players = room.players.filter((p) => p.id !== socket.id);
         console.log("A user disconnected:", socket.id);
         console.log("Number of players connected:", room.players.length);
-
-        // // Broadcast updated player list to the room
-        // io.to(roomCode).emit("updatePlayers", room.players);
     });
 });
 

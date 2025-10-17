@@ -4,19 +4,8 @@ Jackbox style game of "Would You Rather"
 
 ## How to run
 
-The current version is hosted with Cloudflare and runs on localhost port 3000.
+Deployed on Heroku at https://balance-game-6967760693ac.herokuapp.com/.
 
-*Will migrate to custom domain soon*
+Use the link to join a room or create a new one.
 
-Install Cloudflare CLI (install choco first, account required for authentication):
-```choco install cloudflare```
-
-Run command
-```npm run start```
-
-In a separate terminal, run
-```cloudflared tunnel --url http://localhost:3000```
-
-Use the generated ".trycloudflare.com" link through your browser app to access the game
-
-Enter the 4-letter room code printed on the console to join the game
+*TO DO: run on custom domain*
