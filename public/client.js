@@ -166,7 +166,7 @@ socket.on("roundResults", ({ currentPlayerName, correctAnswerText, results }) =>
     }
 });
 
-// Announce game over once game is done
+// Announce game over once the game is done
 socket.on("gameOver", ({}) => {
     gameScreen.style.display = "none";
     endScreen.style.display = "block";

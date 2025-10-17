@@ -92,7 +92,7 @@ io.on("connection", (socket) => {
             io.to(roomCode).emit("roomUpdate", players);
 
             // Tell this client whether they're the host
-            io.to(socket.id).emit("hostAssignment", {   // Hopefully this doesn't result to an error
+            io.to(socket.id).emit("hostAssignment", {   // Hopefully this doesn't result in an error
                 isHost: socket.id === room.hostId
             });
         } else {
