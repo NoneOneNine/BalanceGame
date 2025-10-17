@@ -14,7 +14,7 @@ app.use((req, res, next) => {
 
 app.use(express.static("public"));
 
-const PORT =  3000;
+const PORT =  process.env.PORT || 3000;
 
 // Start server
 server.listen(PORT, () => {
