@@ -1,6 +1,7 @@
 const socket = io();
 
 // UI Elements
+const startScreen = document.getElementById("startScreen");
 const joinScreen = document.getElementById("joinScreen");
 const lobbyScreen = document.getElementById("lobbyScreen");
 const lobbyRoomCode = document.getElementById("lobbyRoomCode");
@@ -10,6 +11,8 @@ const gameContent = document.getElementById("gameContent");
 const endScreen = document.getElementById("endScreen");
 const endContent = document.getElementById("endContent");
 const playersList = document.getElementById("playersList");
+const createButton = document.getElementById("createButton");
+const joinRoom = document.getElementById("joinRoom");
 const joinButton = document.getElementById("joinButton");
 const startGameButton = document.getElementById("startGameButton");
 
@@ -18,10 +21,26 @@ let playerName = "";
 let isHost = false;
 let hasGuessed = false;
 
+// When "Create Room" is clicked
+createButton.onclick = () => {
+    playerName = document.getElementById("playerNameInput").value;
+
+    if (playerName) {
+        socket.emit("createRoom", { playerName });
+    } else {
+        alert("Please enter your name first.");
+    }
+};
+
+joinRoom.onclick = () => {
+    startScreen.style.display = "none";
+    joinScreen.style.display = "block";
+};
+
 // Join button click handler
 joinButton.onclick = () => {
     roomCode = document.getElementById("roomCodeInput").value.toUpperCase();
-    playerName = document.getElementById("playerNameInput").value;
+    playerName = document.getElementById("getPlayer").value;
 
     if (roomCode && playerName) {
         socket.emit("joinRoom", { roomCode, playerName });
@@ -29,6 +48,22 @@ joinButton.onclick = () => {
         alert("Please enter both a room code and your name.");
     }
 };
+
+// When the server confirms the new room
+socket.on("roomCreated", ({ newRoomCode, players }) => {
+    isHost = true;
+    roomCode = newRoomCode;
+
+    startScreen.style.display = "none";
+    lobbyScreen.style.display = "block";
+    lobbyRoomCode.textContent = roomCode;
+
+    playersList.innerHTML = "<h3>Players:</h3>" +
+        players.map(p => `<p>${p}</p>`).join("");
+
+    startGameButton.style.display = "inline-block";
+    startGameButton.disabled = false;
+});
 
 // Update the lobby's list of players
 socket.on("roomUpdate", (players) => {
@@ -95,7 +130,7 @@ socket.on("newTurn", ({currentPlayerId, currentPlayerName, question, codeFromSer
 });
 
 // When it's time for everyone else to guess
-socket.on("startGuessing", ({ currentPlayerId, question }) => {
+socket.on("startGuessing", ({ roomCode, currentPlayerId, question }) => {
     hasGuessed = false;  // Reset the flag for this new round
 
     // Only show this for players who aren't the answering player
@@ -116,14 +151,14 @@ socket.on("startGuessing", ({ currentPlayerId, question }) => {
         document.getElementById("guessAButton").onclick = () => {
             if (!hasGuessed) {
                 hasGuessed = true;
-                socket.emit("submitGuess", { guess: 'A' });
+                socket.emit("submitGuess", { roomCode, guess: 'A' });
                 disableGuessButtons();
             }
         };
         document.getElementById("guessBButton").onclick = () => {
             if (!hasGuessed) {
                 hasGuessed = true;
-                socket.emit("submitGuess", { guess: 'B' });
+                socket.emit("submitGuess", { roomCode, guess: 'B' });
                 disableGuessButtons();
             }
         };
@@ -132,7 +167,7 @@ socket.on("startGuessing", ({ currentPlayerId, question }) => {
     }
 });
 
-socket.on("allGuessesSubmitted", () => {
+socket.on("allGuessesSubmitted", (roomCode) => {
     if (isHost) {
         gameContent.innerHTML = `
             <h2>All players have made their guesses!</h2>
@@ -140,14 +175,14 @@ socket.on("allGuessesSubmitted", () => {
         `;
 
         document.getElementById("revealButton").onclick = () => {
-            socket.emit("revealResults");
+            socket.emit("revealResults", roomCode);
         };
     } else {
         gameContent.innerHTML = `<h2>All guesses are in! Waiting for the host to reveal results...</h2>`;
     }
 });
 
-socket.on("roundResults", ({ currentPlayerName, correctAnswerText, results }) => {
+socket.on("roundResults", ({ roomCode, currentPlayerName, correctAnswerText, results }) => {
     let resultHtml = `<h2>${currentPlayerName} said: ${correctAnswerText}</h2><h3>Results:</h3>`;
 
     results.forEach(r => {
@@ -159,7 +194,7 @@ socket.on("roundResults", ({ currentPlayerName, correctAnswerText, results }) =>
         gameContent.innerHTML = resultHtml;
 
         document.getElementById("nextRoundButton").onclick = () => {
-            socket.emit("startNextRound");
+            socket.emit("startNextRound", roomCode);
         };
     } else {
         gameContent.innerHTML = resultHtml;
@@ -167,7 +202,7 @@ socket.on("roundResults", ({ currentPlayerName, correctAnswerText, results }) =>
 });
 
 // Announce game over once the game is done
-socket.on("gameOver", ({}) => {
+socket.on("gameOver", ({roomCode}) => {
     gameScreen.style.display = "none";
     endScreen.style.display = "block";
 
@@ -183,7 +218,7 @@ socket.on("gameOver", ({}) => {
     }
 
     document.getElementById("showFinalScore").onclick = () => {
-        socket.emit("revealScoreboard", {});
+        socket.emit("revealScoreboard", {roomCode});
     };
 });
 

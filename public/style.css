@@ -11,7 +11,7 @@ body {
 }
 
 /* Screens Layout */
-#joinScreen, #lobbyScreen {
+#startScreen, #joinScreen, #lobbyScreen {
     text-align: center;
     background: #ffffff;
     padding: 30px;

@@ -6,13 +6,24 @@
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div id="joinScreen">
+
+<div id="startScreen">
+    <h1>Balance Game</h1>
+    <div class="form">
+        <label for="playerNameInput"></label><input id="playerNameInput" placeholder="Your name" />
+        <button id="createButton">Create Room</button>
+        <h2>- or -</h2>
+        <button id="joinRoom">Join Room</button>
+    </div>
+</div>
+
+<div id="joinScreen" style="display: none;">
     <h1>Balance Game</h1>
     <div class="form">
         <label for="roomCodeInput"></label>
         <input id="roomCodeInput" placeholder="4-letter code" maxlength="4" />
-        <label for="playerNameInput"></label>
-        <input id="playerNameInput" placeholder="Your name" />
+        <label for="getPlayer"></label>
+        <input id="getPlayer" placeholder="Your name" />
         <button id="joinButton">Join Room</button>
     </div>
 </div>

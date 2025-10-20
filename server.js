@@ -6,7 +6,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-
 app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
@@ -46,49 +45,57 @@ function generateRoomCode() {
     return code;
 }
 
-// Room generation
-const roomCode = generateRoomCode();
-console.log(`Room created: ${roomCode}`);
-room = {
-    code: roomCode,
-    players: [],
-    hostId: null,
-    playersWhoAnswered: [],
-    usedQuestions: [],
-    started: false,
-    currentPlayerId: null,
-    currentQuestion: null,
-    currentAnswer: null,
-    points: {},
-    guesses: {}
-};
+const rooms = {};
 
 // Socket.io event handling
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
+    // Creating a room
+    socket.on("createRoom", ({ playerName }) => {
+        const newRoomCode = generateRoomCode(); // same function you used before
+        socket.join(newRoomCode);
+
+        // Room initialization
+        rooms[newRoomCode] = {
+            hostId: socket.id,
+            players: [{ id: socket.id, name: playerName }],
+            playersWhoAnswered: [],
+            usedQuestions: [],
+            started: false,
+            currentPlayerId: null,
+            currentQuestion: null,
+            currentAnswer: null,
+            points: {},
+            guesses: {}
+        };
+        console.log(`Room created: ${newRoomCode}`);
+
+        // Inform creator about their new room
+        io.to(socket.id).emit("roomCreated", {
+            newRoomCode,
+            players: rooms[newRoomCode].players.map(p => p.name)
+        });
+    });
+
+
     // Joining a room
     socket.on("joinRoom", ({ roomCode, playerName }) => {
-        if (room.code === roomCode) {
-            room.players.push({ id: socket.id, name: playerName });
-            room.points[socket.id] = 0;
+        if (rooms[roomCode]) {
+            rooms[roomCode].players.push({ id: socket.id, name: playerName });
+            rooms[roomCode].points[socket.id] = 0;
 
             socket.join(roomCode);
             console.log(`${playerName} joined room ${roomCode}`);
-            console.log("Number of players connected:", room.players.length);
-
-            // If this is the first player, assign them as host
-            if (room.players.length === 1) {
-                room.hostId = socket.id;
-            }
+            console.log("Number of players connected:", rooms[roomCode].players.length);
 
             // Update the list of players in the room
-            const players = room.players.map(p => p.name);
+            const players = rooms[roomCode].players.map(p => p.name);
             io.to(roomCode).emit("roomUpdate", players);
 
             // Tell this client whether they're the host
             io.to(socket.id).emit("hostAssignment", {   // Hopefully this doesn't result in an error
-                isHost: socket.id === room.hostId
+                isHost: socket.id === rooms[roomCode].hostId
             });
         } else {
             socket.emit("errorMessage", "Invalid room code.");
@@ -97,10 +104,10 @@ io.on("connection", (socket) => {
 
     // Host starting the game
     socket.on("startGame", (roomCode) => {
-        if (room) {
-            if (socket.id === room.hostId) {
-                room.started = true;
-                io.to(roomCode).emit("gameStarted");
+        if (rooms[roomCode]) {
+            if (socket.id === rooms[roomCode].hostId) {
+                rooms[roomCode].started = true;
+                io.to(roomCode).emit("gameStarted", {roomCode});
                 console.log(`Game in room ${roomCode} started.`);
 
                 startNewTurn(roomCode);
@@ -112,41 +119,42 @@ io.on("connection", (socket) => {
 
     // Player submitting their answer
     socket.on("submitAnswer", ({ currentPlayerName, roomCode, answer }) => {
-        room.currentAnswer = answer;
-        room.guesses= {};
+        rooms[roomCode].currentAnswer = answer;
+        rooms[roomCode].guesses = {};
         console.log(`${currentPlayerName} answered: ${answer}`);
 
         // Notify other players it's time to guess
         io.to(roomCode).emit("startGuessing", {
-            currentPlayerId: room.currentPlayerId,
-            question: room.currentQuestion,
+            roomCode,
+            currentPlayerId: rooms[roomCode].currentPlayerId,
+            question: rooms[roomCode].currentQuestion,
         });
     });
 
-    socket.on("submitGuess", ({ guess }) => {
-        room.guesses[socket.id] = guess;
-        console.log(`Player ${socket.id} guessed: ${guess} in room ${room.code}`);
+    socket.on("submitGuess", ({ roomCode, guess }) => {
+        rooms[roomCode].guesses[socket.id] = guess;
+        console.log(`Player ${socket.id} guessed: ${guess} in room ${roomCode}`);
 
         // Check if all non-current players have guessed
-        const numNonCurrentPlayers = room.players.length - 1;
-        if (Object.keys(room.guesses).length === numNonCurrentPlayers) {
-            io.to(room.code).emit("allGuessesSubmitted");
+        const numNonCurrentPlayers = rooms[roomCode].players.length - 1;
+        if (Object.keys(rooms[roomCode].guesses).length === numNonCurrentPlayers) {
+            io.to(roomCode).emit("allGuessesSubmitted", roomCode);     // Keep an eye out for what this does (could potentially be rooms[roomCode]
         }
     });
 
-    socket.on("revealResults", () => {
-        const currentPlayerName = room.players.find(player => player.id === room.currentPlayerId)?.name;
-        const correctAnswer = room.currentAnswer;
-        const correctAnswerText = room.currentQuestion["option" + correctAnswer];
+    socket.on("revealResults", (roomCode) => {
+        const currentPlayerName = rooms[roomCode].players.find(player => player.id === rooms[roomCode].currentPlayerId)?.name;
+        const correctAnswer = rooms[roomCode].currentAnswer;
+        const correctAnswerText = rooms[roomCode].currentQuestion["option" + correctAnswer];
         const results = [];
 
-        for (const [playerId, guess] of Object.entries(room.guesses)) {
+        for (const [playerId, guess] of Object.entries(rooms[roomCode].guesses)) {
             const isCorrect = guess === correctAnswer;
             if (isCorrect) {
-                room.points[playerId] = (room.points[playerId] || 0) + 1;
+                rooms[roomCode].points[playerId] = (rooms[roomCode].points[playerId] || 0) + 1;
             }
 
-            const playerObj = room.players.find(p => p.id === playerId);
+            const playerObj = rooms[roomCode].players.find(p => p.id === playerId);
             const playerName = playerObj ? playerObj.name : "Unknown";
 
             results.push({
@@ -157,27 +165,27 @@ io.on("connection", (socket) => {
             });
         }
 
-        io.to(room.code).emit("roundResults", { currentPlayerName, correctAnswerText, results });
+        io.to(roomCode).emit("roundResults", { roomCode, currentPlayerName, correctAnswerText, results });
 
         // Clear for the next round
-        room.guesses = {};
+        rooms[roomCode].guesses = {};
     });
 
-    socket.on("startNextRound", () => {
+    socket.on("startNextRound", (roomCode) => {
         // If everyone answered once, the game is over
-        if (room.playersWhoAnswered.length >= room.players.length) {
+        if (rooms[roomCode].playersWhoAnswered.length >= rooms[roomCode].players.length) {
             console.log("Game over");
-            io.to(room.code).emit("gameOver", {});
+            io.to(roomCode).emit("gameOver", {roomCode});
         } else {
             // Call your function to select the next player and send the new turn
-            startNewTurn(room.code);
+            startNewTurn(roomCode);
         }
     });
 
-    socket.on("revealScoreboard", ({}) => {
-        const finalScores = room.players.map(p => ({
+    socket.on("revealScoreboard", ({roomCode}) => {
+        const finalScores = rooms[roomCode].players.map(p => ({
             name: p.name,
-            score: room.points[p.id] || 0
+            score: rooms[roomCode].points[p.id] || 0
         }));
 
         // Sort descending by score
@@ -215,30 +223,30 @@ io.on("connection", (socket) => {
             return `<li>${medal} ${player.name}: ${player.score}</li>`;
         }).join("");
 
-        io.to(room.code).emit("scoreBoard", { finalScores: scoreListHtml });
+        io.to(roomCode).emit("scoreBoard", { finalScores: scoreListHtml });
     });
 
     // Disconnection handler (optional for now)
-    socket.on("disconnect", () => {
-        // Remove player from room's player list
-        room.players = room.players.filter((p) => p.id !== socket.id);
-        console.log("A user disconnected:", socket.id);
-        console.log("Number of players connected:", room.players.length);
-    });
+    // socket.on("disconnect", () => {
+    //     // Remove player from room's player list
+    //     rooms[roomCode].players = rooms[roomCode].players.filter((p) => p.id !== socket.id);
+    //     console.log("A user disconnected:", socket.id);
+    //     console.log("Number of players connected:", rooms[roomCode].players.length);
+    // });
 });
 
 // Function to start a new turn
 function startNewTurn(code) {
     // Pick a random player for the turn
-    const currentPlayer = getNextAnsweringPlayer();
+    const currentPlayer = getNextAnsweringPlayer(code);
 
     // Pick a random question
-    const question = getRandomQuestion();
+    const question = getRandomQuestion(code);
 
     // Store current turn state
-    room.currentPlayerId = currentPlayer.id;
-    room.currentQuestion = question;
-    room.currentAnswer = null;
+    rooms[code].currentPlayerId = currentPlayer.id;
+    rooms[code].currentQuestion = question;
+    rooms[code].currentAnswer = null;
 
     console.log(`New turn for player ${currentPlayer.name} in room ${code}.`);
 
@@ -251,34 +259,34 @@ function startNewTurn(code) {
     });
 }
 
-function getNextAnsweringPlayer() {
-    const availablePlayers = room.players.filter(p =>
-        !room.playersWhoAnswered.includes(p.id)
+function getNextAnsweringPlayer(code) {
+    const availablePlayers = rooms[code].players.filter(p =>
+        !rooms[code].playersWhoAnswered.includes(p.id)
     );
 
     // If everyone has answered, reset the list
     if (availablePlayers.length === 0) {
-        room.playersWhoAnswered = [];
-        return getNextAnsweringPlayer();
+        rooms[code].playersWhoAnswered = [];
+        return getNextAnsweringPlayer(code);
     }
 
     // Pick a random player from those who haven't answered yet
     const randomIndex = Math.floor(Math.random() * availablePlayers.length);
     const selectedPlayer = availablePlayers[randomIndex];
 
-    room.playersWhoAnswered.push(selectedPlayer.id);
+    rooms[code].playersWhoAnswered.push(selectedPlayer.id);
     return selectedPlayer;
 }
 
-function getRandomQuestion() {
+function getRandomQuestion(code) {
     const availableQuestions = questions.filter((_, index) =>
-        !room.usedQuestions.includes(index)
+        !rooms[code].usedQuestions.includes(index)
     );
 
     // If no available questions, reset
     if (availableQuestions.length === 0) {
-        room.usedQuestions = [];
-        return getRandomQuestion();
+        rooms[code].usedQuestions = [];
+        return getRandomQuestion(code);
     }
 
     const randomIndex = Math.floor(Math.random() * availableQuestions.length);
@@ -286,7 +294,7 @@ function getRandomQuestion() {
 
     // Track the index of the question relative to the primary questions array
     const realIndex = questions.indexOf(selectedQuestion);
-    room.usedQuestions.push(realIndex);
+    rooms[code].usedQuestions.push(realIndex);
 
     return selectedQuestion;
 }
