@@ -10,6 +10,7 @@
   "private": true,
   "dependencies": {
     "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
   },

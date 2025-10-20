@@ -16,7 +16,14 @@ server.listen(PORT, () => {
 });
 
 // Load questions from a JSON file
-const questions = require("./questions.json");
+const fetch = require("node-fetch");
+
+async function loadQuestions() {
+    const res = await fetch("https://raw.githubusercontent.com/NoneOneNine/BalanceGame/refs/heads/main/questions.json");
+    return await res.json();
+}
+
+const questions = await loadQuestions();
 
 // Generate a random 4-letter room code
 function generateRoomCode() {
