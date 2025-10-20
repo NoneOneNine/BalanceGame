@@ -1,29 +1,36 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import path from "path";
+import { fileURLToPath } from "url";
+import fetch from "node-fetch"; // you might need to npm install node-fetch
+
+// Fix for __dirname not being defined in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public"));
-
 const PORT = process.env.PORT || 3000;
+
+// Serve static files (client.js, style.css, etc.)
+app.use(express.static(path.join(__dirname, "public")));
+
+// Serve the main page for /
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // Start server
 server.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
 
-// Load questions from a JSON file
-const fetch = require("node-fetch");
-
-async function loadQuestions() {
-    const res = await fetch("https://raw.githubusercontent.com/NoneOneNine/BalanceGame/refs/heads/main/questions.json");
-    return await res.json();
-}
-
-const questions = await loadQuestions();
+// Load questions (from a local file or remote URL)
+const res = await fetch("https://raw.githubusercontent.com/NoneOneNine/BalanceGame/refs/heads/main/questions.json");
+const questions = await res.json();
 
 // Generate a random 4-letter room code
 function generateRoomCode() {
