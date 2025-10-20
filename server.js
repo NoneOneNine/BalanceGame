@@ -15,25 +15,8 @@ server.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
 
-const questions = [
-    { question: "Would you rather live without music OR without movies?", optionA: "Without music", optionB: "Without movies" },
-    { question: "Would you rather be perfectly fine without eating OR perfectly fine without sleeping?", optionA: "No need for food", optionB: "No need for sleep" },
-    { question: "Would you rather lose the ability to speak OR lose the ability to hear?", optionA: "No speaking", optionB: "No hearing" },
-    { question: "Would you rather be the best singer in the world OR the best dancer in the world?", optionA: "Best singer", optionB: "Best dancer" },
-    { question: "Would you rather take amazing selfies but look terrible in all other photos OR be photogenic everywhere except your selfies?", optionA: "Amazing selfies", optionB: "Photogenic everywhere else" },
-    { question: "Would you rather win $10,000 OR your friend wins $100,000?", optionA: "Win 10K", optionB: "Friend wins 100K" },
-    { question: "Would you rather be the funniest person in the room OR the smartest person in the room?", optionA: "Funniest", optionB: "Smartest" },
-    { question: "Would you rather your church know all your text messages OR see your entire photo gallery?", optionA: "Messages", optionB: "Photos" },
-    { question: "Would you rather never interact with people in-person OR electronically/online?", optionA: "In-person", optionB: "Electronically/online" },
-    { question: "Would you rather have more money OR have more time?", optionA: "Money", optionB: "Time" },
-    { question: "Would you rather be a master of all instruments OR a master of all sports?", optionA: "All instruments", optionB: "All sports" },
-    { question: "Would you rather have a personal maid OR a personal chef?", optionA: "Personal maid", optionB: "Personal chef" },
-    { question: "Would you rather get punished for a crime you did not commit OR someone else get credit for one of your major accomplishments?", optionA: "Punishment", optionB: "No credit" },
-    { question: "Would you rather see a year into the future OR change a past life event? (both only once)", optionA: "See the future", optionB: "Change the past" },
-    { question: "Would you rather spend the next 6 months: meeting people non-stop OR meet nobody?", optionA: "Meet people non-stop", optionB: "Meet nobody" },
-    { question: "Would you rather have your dream job OR your dream house?", optionA: "Dream job", optionB: "Dream house" },
-    { question: "(Think of your favourite food) Would you rather be required to eat it for every meal OR never eat it again?", optionA: "Every meal", optionB: "Never again" },
-];
+// Load questions from a JSON file
+const questions = require("./questions.json");
 
 // Generate a random 4-letter room code
 function generateRoomCode() {
@@ -53,7 +36,7 @@ io.on("connection", (socket) => {
 
     // Creating a room
     socket.on("createRoom", ({ playerName }) => {
-        const newRoomCode = generateRoomCode(); // same function you used before
+        const newRoomCode = generateRoomCode();
         socket.join(newRoomCode);
 
         // Room initialization
@@ -70,6 +53,7 @@ io.on("connection", (socket) => {
             guesses: {}
         };
         console.log(`Room created: ${newRoomCode}`);
+        console.log(rooms);
 
         // Inform creator about their new room
         io.to(socket.id).emit("roomCreated", {
@@ -94,7 +78,7 @@ io.on("connection", (socket) => {
             io.to(roomCode).emit("roomUpdate", players);
 
             // Tell this client whether they're the host
-            io.to(socket.id).emit("hostAssignment", {   // Hopefully this doesn't result in an error
+            io.to(socket.id).emit("hostAssignment", {
                 isHost: socket.id === rooms[roomCode].hostId
             });
         } else {
@@ -105,19 +89,24 @@ io.on("connection", (socket) => {
     // Host starting the game
     socket.on("startGame", (roomCode) => {
         if (rooms[roomCode]) {
-            if (socket.id === rooms[roomCode].hostId) {
-                rooms[roomCode].started = true;
-                io.to(roomCode).emit("gameStarted", {roomCode});
-                console.log(`Game in room ${roomCode} started.`);
+            if (socket.id === rooms[roomCode].hostId) {     // Check if the host is trying to start the game
+                if (rooms[roomCode].players.length > 1) {   // At least 2 players are required to start the game
+                    rooms[roomCode].started = true;
+                    io.to(roomCode).emit("gameStarted", {roomCode});
+                    console.log(`Game in room ${roomCode} started.`);
 
-                startNewTurn(roomCode);
+                    startNewTurn(roomCode);
+                } else {
+                    socket.emit("errorMessage", "Not enough players to start the game.");
+                    console.log("Not enough players to start the game.");
+                }
             } else {
                 socket.emit("errorMessage", "Only the host can start the game.");
             }
         }
     });
 
-    // Player submitting their answer
+    // Players submitting their answers
     socket.on("submitAnswer", ({ currentPlayerName, roomCode, answer }) => {
         rooms[roomCode].currentAnswer = answer;
         rooms[roomCode].guesses = {};
