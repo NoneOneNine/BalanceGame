@@ -88,5 +88,75 @@
     "question": "Would you rather only raise dogs OR only raise cats?",
     "optionA": "Dogs",
     "optionB": "Cats"
+  },
+  {
+    "question": "Would you rather have unlimited international first-class tickets OR never have to pay for food at restaurants?",
+    "optionA": "Unlimited flights",
+    "optionB": "Free restaurant food"
+  },
+  {
+    "question": "Would you rather always be 15 minutes late OR always be two hours early?",
+    "optionA": "15 minutes late",
+    "optionB": "Two hours early"
+  },
+  {
+    "question": "Would you rather be famous for something embarrassing OR never be recognized for anything?",
+    "optionA": "Embarrassing fame",
+    "optionB": "No recognition"
+  },
+  {
+    "question": "Would you rather always know when someone is lying OR always get away with lying?",
+    "optionA": "Detect lies",
+    "optionB": "Lie successfully"
+  },
+  {
+    "question": "Would you rather live 100 years in the past OR 100 years in the future?",
+    "optionA": "100 years past",
+    "optionB": "100 years future"
+  },
+  {
+    "question": "Would you rather live one life that lasts 1,000 years OR 10 lives that last 100 years each?",
+    "optionA": "1,000-year life",
+    "optionB": "10 lives of 100 years"
+  },
+  {
+    "question": "Would you rather have to sing every time you talk OR dance every time you walk?",
+    "optionA": "Sing when talking",
+    "optionB": "Dance when walking"
+  },
+  {
+    "question": "Would you rather forget your past OR never be able to make new memories?",
+    "optionA": "Forget past",
+    "optionB": "No new memories"
+  },
+  {
+    "question": "Would you rather always have the best Wi-Fi connection OR unlimited phone battery?",
+    "optionA": "Perfect Wi-Fi",
+    "optionB": "Unlimited battery"
+  },
+  {
+    "question": "Would you rather spend a year in a small cozy cabin OR a month in a luxury mansion?",
+    "optionA": "Year in cabin",
+    "optionB": "Month in mansion"
+  },
+  {
+    "question": "Would you rather have free access to every movie ever made OR every video game ever created?",
+    "optionA": "All movies",
+    "optionB": "All games"
+  },
+  {
+    "question": "Would you rather never use social media again OR never watch another TV show/movie?",
+    "optionA": "No social media",
+    "optionB": "No TV/movies"
+  },
+  {
+    "question": "Would you rather be known for your kindness OR your intelligence?",
+    "optionA": "Kindness",
+    "optionB": "Intelligence"
+  },
+  {
+    "question": "Would you rather live your entire life in one city OR move to a new city every week?",
+    "optionA": "One city",
+    "optionB": "New city weekly"
   }
 ]

@@ -10,6 +10,6 @@ Run ```npm install``` to install dependencies.
 
 Deployed on Heroku at https://balance-game-6967760693ac.herokuapp.com/.
 
-Use the link to join a room or create a new one.
+Use the link to start game. Join a room or create a new one.
 
 *TO DO: run on a custom domain*

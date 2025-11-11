@@ -1,7 +1,7 @@
 {
   "name": "balancegame",
   "version": "1.0.0",
-  "description": "'Would You Rather?' Jackbox-style game with Socket.io and Express.js. Made for the FreeCodeCamp Front End Libraries Certification.",
+  "description": "'Would You Rather?' Jackbox-style game with Socket.io and Express.js.",
   "type": "module",
   "main": "server.js",
   "scripts": {

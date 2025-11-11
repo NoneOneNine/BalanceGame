@@ -1,113 +1,162 @@
-/* General Reset */
+/* ---------------------------
+   Global Reset & Base Styles
+---------------------------- */
 body {
     margin: 0;
-    font-family: 'Arial', sans-serif;
-    background: #f4f4f9;
-    color: #333;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    background: #f5f6fa;
+    color: #2e2e2e;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
 }
 
-/* Screens Layout */
-#startScreen, #joinScreen, #lobbyScreen {
-    text-align: center;
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 320px;
+h1, h2, h3 {
+    font-weight: 600;
+    margin: 0;
+    color: #222;
 }
 
-/* Form Styling */
+/* Apply consistent box-sizing for layout reliability */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* ---------------------------
+   Screen Layout Containers
+---------------------------- */
+#startScreen,
+#joinScreen,
+#lobbyScreen,
+#gameScreen,
+#endScreen {
+    text-align: center;
+    background: #ffffff;
+    padding: 32px 28px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    width: 340px;
+    max-width: 90%;
+    animation: fadeIn 0.3s ease;
+}
+
+.screen {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.screen.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ---------------------------
+   Form Styling
+---------------------------- */
 .form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     margin-top: 20px;
 }
 
 input {
-    padding: 10px;
-    font-size: 16px;
+    padding: 10px 12px;
+    font-size: 15px;
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 6px;
+    transition: border 0.25s ease, box-shadow 0.25s ease;
 }
 
+input:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.3);
+    outline: none;
+}
+
+/* ---------------------------
+   Buttons
+---------------------------- */
 button {
     padding: 12px;
+    font-family: inherit;
+    font-weight: 500;
     font-size: 16px;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     background: #4CAF50;
     color: white;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: background 0.3s ease, transform 0.1s ease;
 }
 
 button:hover {
     background: #45a049;
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(1px);
 }
 
 button:disabled {
     background: #ccc;
     cursor: not-allowed;
+    transform: none;
 }
 
-/* Room Code Text */
+/* ---------------------------
+   Room Code & Player List
+---------------------------- */
 .room-code {
     font-size: 18px;
-    margin: 20px 0 10px;
-    font-weight: bold;
+    margin: 18px 0 10px;
+    font-weight: 600;
+    color: #333;
 }
 
-/* Players List */
 #playersList {
     margin: 20px 0;
     text-align: left;
 }
 
 #playersList h3 {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 #playersList p {
-    margin: 5px 0;
-    padding: 5px;
-    background: #eee;
-    border-radius: 4px;
+    margin: 6px 0;
+    padding: 8px 10px;
+    background: #f0f0f0;
+    border-radius: 6px;
 }
 
-/* Waiting Message */
+/* ---------------------------
+   Waiting Message
+---------------------------- */
 .waiting {
     margin: 20px 0;
     font-style: italic;
-    color: #555;
+    color: #666;
 }
 
-/* Game Screen and End Screen */
-#gameScreen, #endScreen {
-    text-align: center;
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 360px;
-}
-
-/* Game Content and End Content */
-#gameContent, #endContent {
-    margin-top: 20px;
+/* ---------------------------
+   Game & End Screens
+---------------------------- */
+#gameContent,
+#endContent {
+    margin-top: 24px;
 }
 
 #gameContent h2 {
     font-size: 22px;
-    margin-bottom: 15px;
+    margin-bottom: 14px;
 }
 
 #gameContent p {
-    font-size: 18px;
+    font-size: 17px;
     margin-bottom: 20px;
 }
 
@@ -118,23 +167,28 @@ button:disabled {
     margin: 10px 0;
     padding: 12px;
     font-size: 16px;
-    border: none;
-    border-radius: 5px;
-    background: #4CAF50;
-    color: white;
-    cursor: pointer;
-    transition: background 0.3s ease;
 }
 
-#gameContent button:hover {
-    background: #45a049;
-}
-
-#gameContent button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
+/* End Screen List */
 #endContent li {
     text-align: left;
+    margin-bottom: 8px;
+}
+
+/* ---------------------------
+   Animations
+---------------------------- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------------------------
+   Responsive Tweaks
+---------------------------- */
+@media (max-height: 600px) {
+    body {
+        align-items: flex-start;
+        padding-top: 20px;
+    }
 }
