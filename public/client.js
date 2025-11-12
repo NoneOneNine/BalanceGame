@@ -22,14 +22,36 @@ let playerName = "";
 let isHost = false;
 let hasGuessed = false;
 
+function showAlert(message) {
+    // Remove existing alert if one is still visible
+    const existingAlert = document.getElementById("customAlert");
+    if (existingAlert) existingAlert.remove();
+
+    const alertBox = document.createElement("div");
+    alertBox.id = "customAlert";
+    alertBox.innerHTML = `
+        <h3>⚠️ Balance Game</h3>
+        <p>${message}</p>
+        <button id="alertOkButton">OK</button>
+    `;
+    document.body.appendChild(alertBox);
+
+    // Button closes the alert
+    document.getElementById("alertOkButton").onclick = () => {
+        alertBox.classList.add("fade-out");
+        setTimeout(() => alertBox.remove(), 300);
+    };
+}
+
+
 // When "Create Room" is clicked
 createButton.onclick = () => {
     playerName = document.getElementById("playerNameInput").value;
 
-    if (playerName) {
+    if (playerName.trim()) {
         socket.emit("createRoom", { playerName });
     } else {
-        alert("Please enter your name first.");
+        showAlert("Please enter your name first.");
     }
 };
 
@@ -46,7 +68,7 @@ joinButton.onclick = () => {
     if (roomCode && playerName) {
         socket.emit("joinRoom", { roomCode, playerName });
     } else {
-        alert("Please enter both a room code and your name.");
+        showAlert("Please enter both a room code and your name.");
     }
 };
 
@@ -271,7 +293,7 @@ socket.on("scoreBoard", ({ finalScores }) => {
 
 // Error messages
 socket.on("errorMessage", (msg) => {
-    alert(msg);
+    showAlert(msg);
 });
 
 // Animate the waiting dots

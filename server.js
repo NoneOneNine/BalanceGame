@@ -3,7 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch"; // you might need to npm install node-fetch
+import fetch from "node-fetch";
 
 // Fix for __dirname not being defined in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -50,6 +50,11 @@ io.on("connection", (socket) => {
 
     // Creating a room
     socket.on("createRoom", ({ playerName }) => {
+        if (playerName.length > 16) {
+            socket.emit("errorMessage", "Name must be shorter than 16 characters.");
+            return;
+        }
+
         const newRoomCode = generateRoomCode();
         socket.join(newRoomCode);
 
@@ -80,11 +85,33 @@ io.on("connection", (socket) => {
     // Joining a room
     socket.on("joinRoom", ({ roomCode, playerName }) => {
         if (rooms[roomCode]) {
-            rooms[roomCode].players.push({ id: socket.id, name: playerName });
+            const cleanName = playerName.trim();
+
+            if (cleanName.length === 0) {
+                socket.emit("errorMessage", "Please enter a name before joining.");
+                return;
+            }
+
+            if (cleanName.length > 16) {
+                socket.emit("errorMessage", "Name must be shorter than 16 characters.");
+                return;
+            }
+
+            // 🔹 Check if the name already exists (case-insensitive)
+            const nameExists = rooms[roomCode].players.some(
+                p => p.name === cleanName
+            );
+
+            if (nameExists) {
+                socket.emit("errorMessage", `The name "${cleanName}" is already taken in this room.`);
+                return;
+            }
+
+            rooms[roomCode].players.push({ id: socket.id, name: cleanName });
             rooms[roomCode].points[socket.id] = 0;
 
             socket.join(roomCode);
-            console.log(`${playerName} joined room ${roomCode}`);
+            console.log(`${cleanName} joined room ${roomCode}`);
             console.log("Number of players connected:", rooms[roomCode].players.length);
 
             // Update the list of players in the room
@@ -253,13 +280,13 @@ io.on("connection", (socket) => {
         io.to(roomCode).emit("scoreBoard", { finalScores: scoreListHtml });
     });
 
-    // Disconnection handler (optional for now)
-    // socket.on("disconnect", () => {
-    //     // Remove player from room's player list
-    //     rooms[roomCode].players = rooms[roomCode].players.filter((p) => p.id !== socket.id);
-    //     console.log("A user disconnected:", socket.id);
-    //     console.log("Number of players connected:", rooms[roomCode].players.length);
-    // });
+    // Disconnection handler
+    socket.on("disconnect", () => {
+        // Remove player from room's player list
+        rooms[roomCode].players = rooms[roomCode].players.filter((p) => p.id !== socket.id);
+        console.log("A user disconnected:", socket.id);
+        console.log("Number of players connected:", rooms[roomCode].players.length);
+    });
 });
 
 // Function to start a new turn
