@@ -107,6 +107,38 @@ button:disabled {
     transform: none;
 }
 
+/* Skip Question Button (lighter blue) */
+.skip-button {
+    background: #4da6ff; /* lighter blue */
+}
+
+.skip-button:hover {
+    background: #3399ff;
+}
+
+/* "Question skipped!" popup */
+#skipNotice {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4da6ff;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    opacity: 1;
+    z-index: 9999;
+    transition: opacity 1s ease;
+}
+
+#skipNotice.fade-out {
+    opacity: 0;
+}
+
+
 /* ---------------------------
    Room Code & Player List
 ---------------------------- */

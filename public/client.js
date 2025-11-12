@@ -14,6 +14,7 @@ const playersList = document.getElementById("playersList");
 const createButton = document.getElementById("createButton");
 const joinRoom = document.getElementById("joinRoom");
 const joinButton = document.getElementById("joinButton");
+const backButton = document.getElementById("backButton");
 const startGameButton = document.getElementById("startGameButton");
 
 let roomCode = "";
@@ -48,6 +49,13 @@ joinButton.onclick = () => {
         alert("Please enter both a room code and your name.");
     }
 };
+
+// Back button click handler
+backButton.onclick = () => {
+    joinScreen.style.display = "none";
+    startScreen.style.display = "block";
+};
+
 
 // When the server confirms the new room
 socket.on("roomCreated", ({ newRoomCode, players }) => {
@@ -104,6 +112,21 @@ socket.on("gameStarted", () => {
     gameContent.innerHTML = `<p>Waiting for the first turn to start...</p>`;
 });
 
+socket.on("questionSkippedNotice", () => {
+    const existingNotice = document.getElementById("skipNotice");
+    if (existingNotice) existingNotice.remove();
+
+    const skipNotice = document.createElement("div");
+    skipNotice.id = "skipNotice";
+    skipNotice.textContent = "Question skipped!";
+    document.body.appendChild(skipNotice);
+
+    setTimeout(() => {
+        skipNotice.classList.add("fade-out");
+        setTimeout(() => skipNotice.remove(), 1000);
+    }, 1000);
+});
+
 socket.on("newTurn", ({currentPlayerId, currentPlayerName, question, codeFromServer}) => {
     roomCode = codeFromServer;
 
@@ -113,6 +136,19 @@ socket.on("newTurn", ({currentPlayerId, currentPlayerName, question, codeFromSer
         <button id="optionAButton">${question.optionA}</button>
         <button id="optionBButton">${question.optionB}</button>
     `;
+
+    // If the host, show skip button
+    if (isHost) {
+        const skipBtn = document.createElement("button");
+        skipBtn.textContent = "Skip Question";
+        skipBtn.id = "skipQuestionButton";
+        skipBtn.classList.add("skip-button");
+        gameContent.appendChild(skipBtn);
+
+        skipBtn.onclick = () => {
+            socket.emit("skipQuestion", roomCode);
+        };
+    }
 
     // Disable buttons if it's not your turn
     if (socket.id !== currentPlayerId) {
@@ -137,7 +173,7 @@ socket.on("startGuessing", ({ roomCode, currentPlayerId, question }) => {
     if (socket.id !== currentPlayerId) {
         gameContent.innerHTML = `
             <h2>What was the correct answer?</h2>
-            <h2>${question.question}</h2>
+            <p>${question.question}</p>
             <button id="guessAButton">Guess: ${question.optionA}</button>
             <button id="guessBButton">Guess: ${question.optionB}</button>
         `;

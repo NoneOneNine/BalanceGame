@@ -174,6 +174,30 @@ io.on("connection", (socket) => {
         rooms[roomCode].guesses = {};
     });
 
+    // Host can skip current question
+    socket.on("skipQuestion", (roomCode) => {
+        if (!rooms[roomCode]) return;
+        if (socket.id !== rooms[roomCode].hostId) return; // Only host allowed
+
+        const currentPlayer = rooms[roomCode].players.find(
+            p => p.id === rooms[roomCode].currentPlayerId
+        );
+
+        // Get a new random question
+        const newQuestion = getRandomQuestion(roomCode);
+        rooms[roomCode].currentQuestion = newQuestion;
+
+        io.to(roomCode).emit("questionSkippedNotice");
+
+        // Broadcast updated question (same player turn)
+        io.to(roomCode).emit("newTurn", {
+            currentPlayerId: currentPlayer.id,
+            currentPlayerName: currentPlayer.name,
+            question: newQuestion,
+            codeFromServer: roomCode
+        });
+    });
+
     socket.on("startNextRound", (roomCode) => {
         // If everyone answered once, the game is over
         if (rooms[roomCode].playersWhoAnswered.length >= rooms[roomCode].players.length) {
